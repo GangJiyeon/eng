@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>한글 → 영어 테스트 (Chunk 선택)</title>
+  <style>
+    :root{
+      --bg1:#fff6fb;
+      --bg2:#f3f7ff;
+      --card:#ffffffcc;
+      --stroke:#e6d9ff;
+      --text:#1f2040;
+      --muted:#5a5c86;
+      --accent:#7c5cff;
+      --accent2:#ff5ccf;
+      --ok:#1fa971;
+      --bad:#e14577;
+      --shadow: 0 10px 30px rgba(31,32,64,.10);
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple SD Gothic Neo","Noto Sans KR", sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 400px at 10% 10%, #ffe7f4 0%, transparent 60%),
+        radial-gradient(900px 500px at 90% 20%, #e7f0ff 0%, transparent 60%),
+        linear-gradient(140deg, var(--bg1), var(--bg2));
+      min-height:100vh;
+    }
+    .wrap{ max-width: 1000px; margin: 0 auto; padding: 18px; }
+    .topbar{
+      display:flex; gap:12px; align-items:flex-end; justify-content:space-between; flex-wrap:wrap;
+      margin-bottom: 12px;
+    }
+    h1{ font-size: 20px; margin:0; display:flex; gap:10px; align-items:center; }
+    .logo{
+      width:34px;height:34px;border-radius:12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: var(--shadow);
+      position:relative;
+    }
+    .logo:after{
+      content:"";
+      position:absolute; inset:9px;
+      border-radius:10px;
+      background: rgba(255,255,255,.85);
+      transform: rotate(8deg);
+    }
+    .subtitle{ color:var(--muted); font-size: 13px; }
+    .pillRow{ display:flex; gap:8px; flex-wrap:wrap; }
+    .pill{
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.7);
+      box-shadow: 0 6px 18px rgba(31,32,64,.06);
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .layout{
+      display:grid; gap:12px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 900px){
+      .layout{ grid-template-columns: 1.3fr .7fr; }
+    }
+    .card{
+      border: 1px solid var(--stroke);
+      background: var(--card);
+      backdrop-filter: blur(8px);
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .row.tight{ gap:8px; }
+    label.small{ font-size:12px; color:var(--muted); font-weight:700; }
+    select{
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.9);
+      border-radius: 14px;
+      padding: 10px 12px;
+      font: inherit;
+      outline: none;
+    }
+    button{
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.9);
+      border-radius: 14px;
+      padding: 10px 12px;
+      font: inherit;
+      cursor:pointer;
+      transition: transform .06s ease, box-shadow .2s ease;
+    }
+    button:hover{ box-shadow: 0 10px 20px rgba(31,32,64,.10); }
+    button:active{ transform: translateY(1px); }
+    button.primary{
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color:white;
+      font-weight: 800;
+    }
+    button.ok{ border-color: rgba(31,169,113,.35); background: rgba(31,169,113,.10); color: var(--ok); font-weight:800; }
+    button.bad{ border-color: rgba(225,69,119,.35); background: rgba(225,69,119,.10); color: var(--bad); font-weight:800; }
+    button:disabled{ opacity:.5; cursor:not-allowed; box-shadow:none; }
+
+    details{
+      border: 1px dashed rgba(124,92,255,.35);
+      border-radius: 16px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,.55);
+    }
+    summary{ cursor:pointer; font-weight:900; color: var(--text); }
+
+    .chunks{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 8px;
+      margin-top:10px;
+    }
+    @media (min-width: 700px){
+      .chunks{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+    }
+    .chunkItem{
+      display:flex; gap:8px; align-items:center;
+      padding: 10px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(124,92,255,.18);
+      background: rgba(255,255,255,.65);
+      user-select:none;
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+    .chunkItem input{ width: 18px; height:18px; }
+
+    .qaHead{
+      display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;
+    }
+    .qNo{ color: var(--muted); font-weight:900; }
+    .korean{
+      font-size: 24px;
+      font-weight: 900;
+      line-height: 1.2;
+      margin-top: 6px;
+      letter-spacing: -0.2px;
+    }
+    .hint{ color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+    .answerBox{
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px dashed rgba(124,92,255,.4);
+      background: rgba(255,255,255,.65);
+      display:none;
+    }
+    .answerBox.show{ display:block; }
+    .answerLabel{ font-size: 12px; color: var(--muted); font-weight: 900; }
+    .answerText{ font-size: 20px; font-weight: 900; margin-top: 4px; }
+
+    .msg{
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.65);
+      display:none;
+      font-weight: 900;
+    }
+    .msg.show{ display:block; }
+    .msg.ok{ border-color: rgba(31,169,113,.35); color: var(--ok); }
+    .msg.bad{ border-color: rgba(225,69,119,.35); color: var(--bad); }
+
+    .listBox{
+      max-height: 270px;
+      overflow:auto;
+      border: 1px solid var(--stroke);
+      border-radius: 16px;
+      padding: 10px;
+      background: rgba(255,255,255,.6);
+    }
+    .item{
+      display:flex; justify-content:space-between; gap:10px;
+      padding: 8px 6px;
+      border-bottom: 1px solid rgba(124,92,255,.14);
+    }
+    .item:last-child{ border-bottom:0; }
+    .item .t{ font-weight:900; }
+    .item .s{ color: var(--muted); font-size:12px; margin-top:2px; }
+
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(124,92,255,.3);
+      background: rgba(255,255,255,.75);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .footer{ margin-top: 10px; font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <h1><span class="logo" aria-hidden="true"></span>한글 → 영어 테스트 (Chunk 선택)</h1>
+      <div class="subtitle">“정답 보기”로 영어 확인 → 네가 맞음/오답을 눌러서 기록하기 💗</div>
+    </div>
+    <div class="pillRow">
+      <div class="pill" id="modePill">🧪 모드: -</div>
+      <div class="pill" id="progressPill">📌 진행: -</div>
+      <div class="pill" id="wrongPill">💗 오답: -</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- LEFT -->
+    <div class="card">
+      <div class="row">
+        <label class="small">테스트 모드</label>
+        <select id="testMode">
+          <option value="sequential">순서대로</option>
+          <option value="mixed">믹스(섞어서)</option>
+          <option value="wrong">오답 복습(오답만)</option>
+        </select>
+
+        <button class="primary" id="startBtn">🌟 시작/재시작</button>
+        <button id="resetBtn" title="오답/진행 초기화">🧼 기록 초기화</button>
+      </div>
+
+      <details style="margin-top:10px;">
+        <summary>📦 출제 데이터 파일 선택 (200개 단위)</summary>
+        <div class="row tight" style="margin-top:10px;">
+          <button id="chunkAll">전체 선택</button>
+          <button id="chunkNone">전체 해제</button>
+          <span class="subtitle">선택한 파일만 불러와서 출제해!</span>
+        </div>
+
+        <div class="chunks" id="chunkGrid"></div>
+
+        <div class="subtitle" style="margin-top:8px;">
+          ※ JSON은 <b>/data/expressions_1-200.json</b> 같은 경로에 있어야 해.
+        </div>
+      </details>
+
+      <div class="card" style="margin-top:12px;">
+        <div class="qaHead">
+          <div>
+            <div class="qNo" id="qNo">#-</div>
+            <div class="korean" id="qKoPrompt">시작을 눌러줘 💫</div>
+            <div class="hint" id="qHint"></div>
+          </div>
+          <div class="row">
+            <button id="prevBtn">⬅️ 이전</button>
+            <button id="nextBtn">다음 ➡️</button>
+          </div>
+        </div>
+
+        <div class="row tight" style="margin-top:10px;">
+          <button class="primary" id="showBtn">👀 정답 보기</button>
+          <button class="ok" id="markCorrectBtn">🟢 맞음</button>
+          <button class="bad" id="markWrongBtn">💗 오답</button>
+          <button id="toggleWrongViewBtn" title="오답만 보기/전체 보기 토글">오답만 보기</button>
+        </div>
+
+        <div class="msg" id="msgBox"></div>
+
+        <div class="answerBox" id="answerBox">
+          <div class="answerLabel">정답(영어)</div>
+          <div class="answerText" id="qEnAnswer"></div>
+        </div>
+
+        <div class="footer">
+          단축키: <span class="kbd">Space</span> 정답보기 ·
+          <span class="kbd">←/→</span> 이전/다음 ·
+          <span class="kbd">1</span> 맞음 · <span class="kbd">2</span> 오답
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="card">
+      <div class="row" style="justify-content:space-between;">
+        <div>
+          <div style="font-weight:900;">💗 오답 노트</div>
+          <div class="subtitle">틀린 것만 모아서 복습해보자!</div>
+        </div>
+        <button id="clearWrongBtn">오답 비우기</button>
+      </div>
+
+      <div class="listBox" id="wrongList" style="margin-top:10px;"></div>
+
+      <div class="footer">팁: 오답 복습 모드로 바꾸면 오답만 섞어서 돌릴 수 있어 ✨</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ====== Chunk file list (200개 단위) ======
+  const CHUNKS = [
+    { key:"1-200",    file:"data/expressions_1-200.json" },
+    { key:"201-400",  file:"data/expressions_201-400.json" },
+    { key:"401-600",  file:"data/expressions_401-600.json" },
+    { key:"601-800",  file:"data/expressions_601-800.json" },
+    { key:"801-1000", file:"data/expressions_801-1000.json" },
+    { key:"1001-1200",file:"data/expressions_1001-1200.json" },
+    { key:"1201-1400",file:"data/expressions_1201-1400.json" },
+    { key:"1401-1600",file:"data/expressions_1401-1600.json" },
+    { key:"1601-1800",file:"data/expressions_1601-1800.json" },
+  ];
+
+  // ====== DATA (loaded by chunks) ======
+  let DATA = []; // [{id,en,ko}, ...]
+
+  // ====== STORAGE ======
+  const LS_KEY = "enko_chunk_test_v1";
+  const defaultState = {
+    selectedChunks: ["1-200"],   // 기본은 1-200만
+    orderIds: [],
+    cursor: 0,
+    showAnswer: false,
+    wrongIds: [],
+    wrongViewOnly: false,
+    lastMode: "sequential"
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
+  const uniq = (arr)=>Array.from(new Set(arr));
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if(!raw) return structuredClone(defaultState);
+      const s = JSON.parse(raw);
+      return {...structuredClone(defaultState), ...s};
+    }catch{
+      return structuredClone(defaultState);
+    }
+  }
+  function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+  let state = loadState();
+
+  // ====== HELPERS ======
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+  function getItem(id){ return DATA.find(d=>d.id===id); }
+
+  function showMsg(text, type){
+    const box = $("msgBox");
+    box.textContent = text;
+    box.className = "msg show " + (type || "");
+  }
+  function clearMsg(){
+    const box = $("msgBox");
+    box.className = "msg";
+    box.textContent = "";
+  }
+
+  // ====== Chunk UI ======
+  function initChunkGrid(){
+    const grid = $("chunkGrid");
+    grid.innerHTML = "";
+    CHUNKS.forEach(c=>{
+      const label = document.createElement("label");
+      label.className = "chunkItem";
+      label.innerHTML = `<input type="checkbox" value="${c.key}"><span>${c.key}</span>`;
+      grid.appendChild(label);
+    });
+  }
+
+  function applyChunkSelectionFromState(){
+    document.querySelectorAll('.chunkItem input[type="checkbox"]').forEach(b=>{
+      b.checked = state.selectedChunks.includes(b.value);
+    });
+    $("testMode").value = state.lastMode ?? "sequential";
+  }
+
+  function captureChunkSelectionToState(){
+    const selected = [];
+    document.querySelectorAll('.chunkItem input[type="checkbox"]').forEach(b=>{
+      if(b.checked) selected.push(b.value);
+    });
+    state.selectedChunks = selected.length ? selected : ["1-200"];
+    saveState();
+  }
+
+  async function loadSelectedChunks(){
+    // 선택한 chunk json들을 fetch해서 DATA 합치기
+    const keys = state.selectedChunks;
+    const targets = CHUNKS.filter(c=>keys.includes(c.key));
+
+    const results = [];
+    for(const c of targets){
+      const res = await fetch(c.file, { cache: "no-store" });
+      if(!res.ok){
+        throw new Error(`데이터 파일 로드 실패: ${c.file} (HTTP ${res.status})`);
+      }
+      const json = await res.json();
+      results.push(...json);
+    }
+
+    // id 기준으로 정렬 + 중복 제거(안전)
+    const map = new Map();
+    results.forEach(x=>{ if(x && typeof x.id==="number") map.set(x.id, x); });
+    DATA = Array.from(map.values()).sort((a,b)=>a.id-b.id);
+  }
+
+  // ====== ORDER BUILD ======
+  function buildOrder(){
+    const mode = $("testMode").value;
+
+    let ids;
+    if(mode === "wrong"){
+      // 오답 복습: 현재 DATA 안에 있는 오답만
+      const set = new Set(DATA.map(d=>d.id));
+      ids = state.wrongIds.filter(id=>set.has(id));
+    } else {
+      ids = DATA.map(d=>d.id);
+    }
+    ids = uniq(ids);
+
+    if(mode === "mixed" || mode === "wrong") ids = shuffle(ids);
+    else ids.sort((a,b)=>a-b);
+
+    state.orderIds = ids;
+    state.cursor = 0;
+    state.showAnswer = false;
+    state.lastMode = mode;
+    saveState();
+    render();
+  }
+
+  function currentId(){
+    if(!state.orderIds.length) return null;
+    return state.orderIds[clamp(state.cursor, 0, state.orderIds.length-1)];
+  }
+
+  function toggleAnswer(){
+    state.showAnswer = !state.showAnswer;
+    saveState();
+    render();
+  }
+
+  function go(delta){
+    if(!state.orderIds.length) return;
+    state.cursor = clamp(state.cursor + delta, 0, state.orderIds.length-1);
+    state.showAnswer = false;
+    clearMsg();
+    saveState();
+    render();
+  }
+
+  function markWrong(id){
+    if(id==null) return;
+    state.wrongIds = uniq([...state.wrongIds, id]).sort((a,b)=>a-b);
+    saveState();
+    render();
+  }
+  function markCorrect(id){
+    if(id==null) return;
+    state.wrongIds = state.wrongIds.filter(x=>x!==id);
+    saveState();
+    render();
+  }
+
+  function toggleWrongView(){
+    state.wrongViewOnly = !state.wrongViewOnly;
+    saveState();
+    render();
+
+    const mode = $("testMode").value;
+    if(state.wrongViewOnly && mode !== "wrong"){
+      state.orderIds = state.orderIds.filter(id=>state.wrongIds.includes(id));
+      state.cursor = 0;
+      saveState();
+      render();
+    } else if(!state.wrongViewOnly){
+      buildOrder();
+    }
+  }
+
+  // ====== RENDER ======
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, (c)=>({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+    }[c]));
+  }
+
+  function render(){
+    const mode = $("testMode").value;
+    $("modePill").textContent = "🧪 모드: " + (mode==="sequential"?"순서":mode==="mixed"?"믹스":"오답복습");
+
+    const total = state.orderIds.length;
+    const cur = total ? (state.cursor + 1) : 0;
+    $("progressPill").textContent = `📌 진행: ${cur}/${total || "-"}`;
+    $("wrongPill").textContent = `💗 오답: ${state.wrongIds.length}개`;
+
+    $("prevBtn").disabled = !total || state.cursor === 0;
+    $("nextBtn").disabled = !total || state.cursor === total-1;
+    $("showBtn").disabled = !total;
+
+    const id = currentId();
+    if(!id){
+      $("qNo").textContent = "#-";
+      $("qKoPrompt").textContent = "시작을 눌러줘 💫";
+      $("qHint").textContent = "";
+      $("qEnAnswer").textContent = "";
+      $("answerBox").classList.remove("show");
+    } else {
+      const it = getItem(id);
+      $("qNo").textContent = `#${it.id}`;
+      $("qKoPrompt").textContent = it.ko || "(한글 데이터 없음)";
+      $("qEnAnswer").textContent = it.en || "(영어 데이터 없음)";
+      $("qHint").textContent = state.wrongIds.includes(it.id) ? "💗 오답으로 기록된 문제야!" : " ";
+      $("answerBox").classList.toggle("show", !!state.showAnswer);
+    }
+
+    // wrong list (현재 DATA에 있는 오답만 표시)
+    const set = new Set(DATA.map(d=>d.id));
+    const wrongInData = state.wrongIds.filter(id=>set.has(id));
+
+    const list = $("wrongList");
+    list.innerHTML = "";
+    if(!wrongInData.length){
+      list.innerHTML = `<div class="subtitle">아직 오답이 없어! 🌸</div>`;
+    } else {
+      wrongInData.forEach(wid=>{
+        const w = getItem(wid);
+        const div = document.createElement("div");
+        div.className = "item";
+        div.innerHTML = `
+          <div>
+            <div class="t">#${w.id} · ${escapeHtml(w.ko || "")}</div>
+            <div class="s">${escapeHtml(w.en || "")}</div>
+          </div>
+          <div class="row tight">
+            <button data-jump="${w.id}">이동</button>
+            <button data-clear="${w.id}">해제</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    $("toggleWrongViewBtn").textContent = state.wrongViewOnly ? "전체 보기" : "오답만 보기";
+  }
+
+  // ====== EVENTS ======
+  $("startBtn").addEventListener("click", async ()=>{
+    try{
+      captureChunkSelectionToState();
+      state.wrongViewOnly = false;
+      saveState();
+
+      showMsg("데이터 불러오는 중… 📦", "");
+      await loadSelectedChunks();
+
+      clearMsg();
+      buildOrder();
+    }catch(err){
+      showMsg(String(err.message || err), "bad");
+    }
+  });
+
+  $("resetBtn").addEventListener("click", ()=>{
+    state = structuredClone(defaultState);
+    localStorage.removeItem(LS_KEY);
+    applyChunkSelectionFromState();
+    clearMsg();
+    DATA = [];
+    render();
+  });
+
+  $("prevBtn").addEventListener("click", ()=>go(-1));
+  $("nextBtn").addEventListener("click", ()=>go(1));
+  $("showBtn").addEventListener("click", ()=>toggleAnswer());
+
+  $("markWrongBtn").addEventListener("click", ()=>{
+    const id = currentId();
+    markWrong(id);
+    showMsg("오답으로 저장했어 💗", "bad");
+    setTimeout(()=>go(1), 180);
+  });
+
+  $("markCorrectBtn").addEventListener("click", ()=>{
+    const id = currentId();
+    markCorrect(id);
+    showMsg("맞음 처리 완료! 🌸", "ok");
+    setTimeout(()=>go(1), 180);
+  });
+
+  $("toggleWrongViewBtn").addEventListener("click", ()=>toggleWrongView());
+
+  $("clearWrongBtn").addEventListener("click", ()=>{
+    state.wrongIds = [];
+    saveState();
+    clearMsg();
+    render();
+  });
+
+  $("testMode").addEventListener("change", ()=>{
+    state.wrongViewOnly = false;
+    state.lastMode = $("testMode").value;
+    saveState();
+    buildOrder();
+  });
+
+  $("chunkAll").addEventListener("click", ()=>{
+    document.querySelectorAll('.chunkItem input[type="checkbox"]').forEach(b=>b.checked=true);
+    captureChunkSelectionToState();
+  });
+  $("chunkNone").addEventListener("click", ()=>{
+    document.querySelectorAll('.chunkItem input[type="checkbox"]').forEach(b=>b.checked=false);
+    captureChunkSelectionToState();
+  });
+
+  $("wrongList").addEventListener("click", (e)=>{
+    const t = e.target;
+    if(!(t instanceof HTMLElement)) return;
+    const jump = t.getAttribute("data-jump");
+    const clear = t.getAttribute("data-clear");
+    if(jump){
+      const id = parseInt(jump,10);
+      if(!state.orderIds.includes(id)) state.orderIds = uniq([id, ...state.orderIds]);
+      state.cursor = Math.max(0, state.orderIds.indexOf(id));
+      state.showAnswer = true;
+      clearMsg();
+      saveState();
+      render();
+    }
+    if(clear){
+      const id = parseInt(clear,10);
+      markCorrect(id);
+      showMsg("오답에서 제거했어 🌼", "ok");
+    }
+  });
+
+  // keyboard shortcuts
+  window.addEventListener("keydown", (e)=>{
+    if(e.key === " "){
+      e.preventDefault();
+      toggleAnswer();
+    }
+    if(e.key === "ArrowLeft") go(-1);
+    if(e.key === "ArrowRight") go(1);
+    if(e.key === "1"){ const id = currentId(); markCorrect(id); showMsg("맞음 처리 🌸", "ok"); setTimeout(()=>go(1), 150); }
+    if(e.key === "2"){ const id = currentId(); markWrong(id); showMsg("오답 저장 💗", "bad"); setTimeout(()=>go(1), 150); }
+  });
+
+  // ====== BOOT ======
+  initChunkGrid();
+  applyChunkSelectionFromState();
+  render();
+</script>
+</body>
+</html>
